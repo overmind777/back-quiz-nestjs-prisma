@@ -28,7 +28,11 @@ export class QuizService {
   }
 
   findAll() {
-    return this.prisma.quiz.findMany();
+    return this.prisma.quiz.findMany({
+      include: {
+        questions: true,
+      },
+    });
   }
 
   async findOne(id: number) {
