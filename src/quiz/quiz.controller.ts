@@ -9,15 +9,18 @@ import {
   UsePipes,
   ValidationPipe,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
 import { Prisma } from '@prisma/client';
 import { CreateQuizDto } from './dto/create-quiz.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('quiz')
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async create(@Body() createQuizDto: CreateQuizDto) {
