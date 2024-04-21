@@ -1,30 +1,38 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { Prisma } from '@prisma/client';
-import { CreateQuizDto } from './dto/create-quiz.dto';
+import { QuestionCreateInput } from './dto/create-quiz.dto';
 
 @Injectable()
 export class QuizService {
   constructor(private prisma: DatabaseService) {}
 
-  create(createQuizDto: CreateQuizDto) {
-    const data = {
-      title: createQuizDto.title,
-      category: createQuizDto.category,
-      owner: createQuizDto.owner,
-      questions: {
-        create: createQuizDto.questions.map((question) => ({
-          text: question.text,
-        })),
-      },
-    };
+  async create(createQuizDto: Prisma.QuizCreateInput) {
+    try {
+      const data: Prisma.QuizCreateInput = {
+        title: createQuizDto.title,
+        category: createQuizDto.category,
+        owner: createQuizDto.owner,
+        ageGroup: createQuizDto.ageGroup,
+        background: createQuizDto.background,
+        questions: {
+          create: (createQuizDto.questions as QuestionCreateInput[]).map(
+            (question) => ({
+              text: question.text,
+            }),
+          ),
+        },
+      };
 
-    return this.prisma.quiz.create({
-      data: data,
-      include: {
-        questions: true,
-      },
-    });
+      return await this.prisma.quiz.create({
+        data: data,
+        include: {
+          questions: true,
+        },
+      });
+    } catch (err) {
+      throw new Error(`Error creating quiz: ${err.message}`);
+    }
   }
 
   findAll() {

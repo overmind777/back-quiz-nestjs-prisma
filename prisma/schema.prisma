@@ -14,6 +14,11 @@ model Quiz {
   category  String
   questions Question[]
   owner     String
+  rating    Int?
+  finished  Int?
+  ratingQuantity Int?
+  ageGroup  String
+  background String
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }

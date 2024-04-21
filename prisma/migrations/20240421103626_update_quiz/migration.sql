@@ -4,6 +4,11 @@ CREATE TABLE "Quiz" (
     "title" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "owner" TEXT NOT NULL,
+    "rating" INTEGER,
+    "finished" INTEGER,
+    "ratingQuantity" INTEGER,
+    "ageGroup" TEXT NOT NULL,
+    "background" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -19,8 +24,21 @@ CREATE TABLE "Question" (
     CONSTRAINT "Question_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "User" (
+    "id" SERIAL NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "name" TEXT,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Question_id_key" ON "Question"("id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- AddForeignKey
 ALTER TABLE "Question" ADD CONSTRAINT "Question_quizId_fkey" FOREIGN KEY ("quizId") REFERENCES "Quiz"("id") ON DELETE SET NULL ON UPDATE CASCADE;

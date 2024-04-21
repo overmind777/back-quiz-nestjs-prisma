@@ -1,40 +1,71 @@
-import { Injectable } from '@nestjs/common';
+import { LoginDto } from './dto/login.dto';
+import { DatabaseService } from './../database/database.service';
+
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
-import { UserDto } from './dto/create-auth.dto';
-import { DatabaseService } from '../database/database.service';
-// import { UpdateAuthDto } from './dto/update-auth.dto';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class AuthService {
-  constructor(private auth: DatabaseService) {}
+  constructor(
+    private prisma: DatabaseService,
+    private jwtService: JwtService,
+  ) {}
 
-  async create(createAuthDto: UserDto) {
-    const hashedPassword = await bcrypt.hash(createAuthDto.password, 10);
+  async register(registerDto: RegisterDto) {
+    try {
+      const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.auth.user.create({
-      data: {
-        email: createAuthDto.email,
-        password: hashedPassword,
-        name: createAuthDto.name,
-      },
+      const user = await this.prisma.user.create({
+        data: {
+          email: registerDto.email,
+          password: hashedPassword,
+          name: registerDto.name,
+        },
+      });
+
+      return {
+        email: user.email,
+        name: user.name,
+      };
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        // Check if we have a unique constraint violation on the email field
+        if (error.code === 'P2002') {
+          throw new ConflictException('Email already exists');
+        }
+      }
+      // Re-throw the error if it's not handled above
+      throw error;
+    }
+  }
+
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+    const user = await this.prisma.user.findUnique({
+      where: { email },
     });
 
-    return user;
-  }
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-  findAll() {
-    return this.auth.user.findMany();
-  }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-  // update(id: number, updateAuthDto: UpdateAuthDto) {
-  //   return `This action updates a #${id} auth`;
-  // }
+    const payload = { email: user.email, password: user.password };
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    return {
+      accessToken: this.jwtService.sign(payload),
+    };
   }
 }
