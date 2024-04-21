@@ -1,8 +1,15 @@
-import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { UserDto } from './dto/create-auth.dto';
-import { DatabaseService } from '../database/database.service';
+import { LoginDto } from './dto/login.dto';
+import { DatabaseService } from './../database/database.service';
+
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { RegisterDto } from './dto/register.dto';
+import * as bcrypt from 'bcrypt';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 // import { UpdateAuthDto } from './dto/update-auth.dto';
 
 @Injectable()
@@ -12,36 +19,54 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async create(createAuthDto: UserDto) {
-    const hashedPassword = await bcrypt.hash(createAuthDto.password, 10);
+  async register(registerDto: RegisterDto) {
+    try {
+      const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    const user = await this.auth.user.create({
-      data: {
-        email: createAuthDto.email,
-        password: hashedPassword,
-        name: createAuthDto.name,
-      },
+      const user = await this.auth.user.create({
+        data: {
+          email: registerDto.email,
+          password: hashedPassword,
+          name: registerDto.name,
+        },
+      });
+
+      return {
+        email: user.email,
+        name: user.name,
+      };
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        // Check if we have a unique constraint violation on the email field
+        if (error.code === 'P2002') {
+          throw new ConflictException('Email already exists');
+        }
+      }
+      // Re-throw the error if it's not handled above
+      throw error;
+    }
+  }
+
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+    const user = await this.auth.user.findUnique({
+      where: { email },
     });
 
-    const payload = { email: user.email, sub: user.id };
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = { email: user.email, password: user.password };
+
     return {
-      access_token: this.jwtService.sign(payload),
+      accessToken: this.jwtService.sign(payload),
     };
-  }
-
-  findAll() {
-    return this.auth.user.findMany();
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  // update(id: number, updateAuthDto: UpdateAuthDto) {
-  //   return `This action updates a #${id} auth`;
-  // }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
   }
 }
