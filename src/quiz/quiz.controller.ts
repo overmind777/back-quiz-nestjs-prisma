@@ -10,18 +10,21 @@ import {
   ValidationPipe,
   ParseIntPipe,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
 import { Prisma } from '@prisma/client';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Quiz } from './dto/quiz.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Quiz')
 @Controller('quiz')
 export class QuizController {
   constructor(private readonly quizService: QuizService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @ApiOperation({ summary: 'Create quiz' })
   @ApiBody({ type: CreateQuizDto })

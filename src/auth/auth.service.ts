@@ -10,11 +10,12 @@ import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+// import { UpdateAuthDto } from './dto/update-auth.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: DatabaseService,
+    private auth: DatabaseService,
     private jwtService: JwtService,
   ) {}
 
@@ -22,7 +23,7 @@ export class AuthService {
     try {
       const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-      const user = await this.prisma.user.create({
+      const user = await this.auth.user.create({
         data: {
           email: registerDto.email,
           password: hashedPassword,
@@ -48,7 +49,7 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
-    const user = await this.prisma.user.findUnique({
+    const user = await this.auth.user.findUnique({
       where: { email },
     });
 
